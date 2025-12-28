@@ -1,0 +1,273 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+
+local targetOffsets = {}
+local isSpelling = false
+local publicMode = true
+local currentDist = -45 -- Default Distance
+local currentHeight = 30 -- Default Height
+
+local Alphabet = {
+    ["A"] = {{0,0,1,1,1,0,0}, {0,1,0,0,0,1,0}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}},
+    ["B"] = {{1,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,0}},
+    ["C"] = {{0,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,1}, {0,1,1,1,1,1,0}},
+    ["D"] = {{1,1,1,1,1,0,0}, {1,0,0,0,0,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,1,0}, {1,1,1,1,1,0,0}},
+    ["E"] = {{1,1,1,1,1,1,1}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,1,1,1,1,1,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,1,1,1,1,1,1}},
+    ["F"] = {{1,1,1,1,1,1,1}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,1,1,1,1,1,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}},
+    ["G"] = {{0,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,0}, {1,0,0,1,1,1,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {0,1,1,1,1,1,0}},
+    ["H"] = {{1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}},
+    ["I"] = {{1,1,1,1,1,1,1}, {0,0,0,1,0,0,0}, {0,0,1,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {1,1,1,1,1,1,1}},
+    ["J"] = {{0,0,0,0,1,1,1}, {0,0,0,0,0,1,0}, {0,0,0,0,0,1,0}, {0,0,0,0,0,1,0}, {1,0,0,0,0,1,0}, {1,0,0,0,0,1,0}, {0,1,1,1,1,0,0}},
+    ["K"] = {{1,0,0,0,0,1,0}, {1,0,0,0,1,0,0}, {1,0,0,1,0,0,0}, {1,1,1,0,0,0,0}, {1,0,0,1,0,0,0}, {1,0,0,0,1,0,0}, {1,0,0,0,0,1,0}},
+    ["L"] = {{1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,1,1,1,1,1,1}},
+    ["M"] = {{1,0,0,0,0,0,1}, {1,1,0,0,0,1,1}, {1,0,1,0,1,0,1}, {1,0,0,1,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}},
+    ["N"] = {{1,0,0,0,0,0,1}, {1,1,0,0,0,0,1}, {1,0,1,0,0,0,1}, {1,0,0,1,0,0,1}, {1,0,0,0,1,0,1}, {1,0,0,0,0,1,1}, {1,0,0,0,0,0,1}},
+    ["O"] = {{0,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {0,1,1,1,1,1,0}},
+    ["P"] = {{1,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}},
+    ["Q"] = {{0,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,1,0,0,1}, {1,0,0,0,1,1,0}, {0,1,1,1,1,0,1}},
+    ["R"] = {{1,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,1,1,1,1,1,0}, {1,0,0,1,0,0,0}, {1,0,0,0,1,0,0}, {1,0,0,0,0,1,0}, {1,0,0,0,0,0,1}},
+    ["S"] = {{0,1,1,1,1,1,1}, {1,0,0,0,0,0,0}, {1,0,0,0,0,0,0}, {0,1,1,1,1,1,0}, {0,0,0,0,0,0,1}, {0,0,0,0,0,0,1}, {1,1,1,1,1,1,0}},
+    ["T"] = {{1,1,1,1,1,1,1}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}},
+    ["U"] = {{1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {0,1,1,1,1,1,0}},
+    ["V"] = {{1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {0,1,0,0,0,1,0}, {0,0,1,0,1,0,0}, {0,0,0,1,0,0,0}},
+    ["W"] = {{1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,1,0,0,1}, {1,0,1,0,1,0,1}, {1,1,0,0,0,1,1}, {1,0,0,0,0,0,1}},
+    ["X"] = {{1,0,0,0,0,0,1}, {0,1,0,0,0,1,0}, {0,0,1,0,1,0,0}, {0,0,0,1,0,0,0}, {0,0,1,0,1,0,0}, {0,1,0,0,0,1,0}, {1,0,0,0,0,0,1}},
+    ["Y"] = {{1,0,0,0,0,0,1}, {0,1,0,0,0,1,0}, {0,0,1,0,1,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}},
+    ["Z"] = {{1,1,1,1,1,1,1}, {0,0,0,0,0,1,0}, {0,0,0,0,1,0,0}, {0,0,0,1,0,0,0}, {0,0,1,0,0,0,0}, {0,1,0,0,0,0,0}, {1,1,1,1,1,1,1}},
+    ["0"] = {{0,1,1,1,1,1,0}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {1,0,0,0,0,0,1}, {0,1,1,1,1,1,0}},
+    ["1"] = {{0,0,0,1,0,0,0}, {0,0,1,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,1,1,1,1,1,0}},
+    ["!"] = {{0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,1,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,1,0,0,0}},
+    ["?"] = {{0,1,1,1,1,0,0}, {1,0,0,0,0,1,0}, {0,0,0,0,0,1,0}, {0,0,0,1,1,0,0}, {0,0,0,1,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,1,0,0,0}},
+    [" "] = {{0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}, {0,0,0,0,0,0,0}},
+}
+
+----------------------------------------------------------------
+-- 🌑 HUD SETUP
+----------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FlightText_V5_6"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 180, 0, 420)
+MainFrame.Position = UDim2.new(0.02, 0, 0.3, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true; MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(40, 40, 45)
+UIStroke.Thickness = 1
+
+local CloseUI = Instance.new("TextButton")
+CloseUI.Size = UDim2.new(0, 25, 0, 25)
+CloseUI.Position = UDim2.new(1, -30, 0, 5)
+CloseUI.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+CloseUI.Text = "X"
+CloseUI.TextColor3 = Color3.new(1,1,1)
+CloseUI.Font = Enum.Font.RobotoMono; CloseUI.TextSize = 14
+CloseUI.Parent = MainFrame
+Instance.new("UICorner", CloseUI).CornerRadius = UDim.new(0, 4)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 0, 35)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Text = "FLIGHT TEXT"
+Title.TextColor3 = Color3.fromRGB(200, 200, 200)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.RobotoMono; Title.TextSize = 12
+Title.Parent = MainFrame
+
+local function createHUDButton(text, yPos, color)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 160, 0, 40)
+    btn.Position = UDim2.new(0.5, -80, 0, yPos)
+    btn.Text = text:upper()
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.RobotoMono; btn.TextSize = 10
+    btn.Parent = MainFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 2)
+    return btn
+end
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(0, 160, 0, 35)
+InputBox.Position = UDim2.new(0.5, -80, 0, 45)
+InputBox.PlaceholderText = "> INPUT_MSG"
+InputBox.Text = ""
+InputBox.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+InputBox.TextColor3 = Color3.fromRGB(0, 180, 255)
+InputBox.Font = Enum.Font.RobotoMono; InputBox.TextSize = 10
+InputBox.Parent = MainFrame
+Instance.new("UICorner", InputBox).CornerRadius = UDim.new(0, 2)
+
+local ActionBtn = createHUDButton("INITIATE_FORMATION", 90, Color3.fromRGB(0, 70, 140))
+local ToggleBtn = createHUDButton("VIEW: PUBLIC", 140, Color3.fromRGB(35, 35, 35))
+local StopBtn = createHUDButton("TERMINATE", 190, Color3.fromRGB(100, 30, 30))
+
+----------------------------------------------------------------
+-- 🎚️ SLIDER LOGIC
+----------------------------------------------------------------
+local function createSlider(name, yPos, min, max, default)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 160, 0, 15)
+    label.Position = UDim2.new(0, 10, 0, yPos)
+    label.Text = name .. ": " .. default
+    label.TextColor3 = Color3.fromRGB(150, 150, 150)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.RobotoMono; label.TextSize = 9
+    label.Parent = MainFrame
+
+    local tray = Instance.new("Frame")
+    tray.Size = UDim2.new(0, 160, 0, 4)
+    tray.Position = UDim2.new(0, 10, 0, yPos + 20)
+    tray.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tray.BorderSizePixel = 0
+    tray.Parent = MainFrame
+
+    local knob = Instance.new("TextButton")
+    knob.Size = UDim2.new(0, 10, 0, 14)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+    knob.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    knob.Text = ""
+    knob.Parent = tray
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(0, 2)
+
+    local dragging = false
+    knob.MouseButton1Down:Connect(function() dragging = true end)
+    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mousePos = UserInputService:GetMouseLocation().X
+            local relativeX = math.clamp((mousePos - tray.AbsolutePosition.X) / tray.AbsoluteSize.X, 0, 1)
+            knob.Position = UDim2.new(relativeX, 0, 0.5, 0)
+            local val = math.floor(min + (relativeX * (max - min)))
+            label.Text = name .. ": " .. val
+            if name == "DIST" then currentDist = -val elseif name == "HGHT" then currentHeight = val end
+        end
+    end)
+end
+
+createSlider("DIST", 245, 10, 200, 45)
+createSlider("HGHT", 295, -50, 100, 30)
+
+local BlockLabel = Instance.new("TextLabel")
+BlockLabel.Size = UDim2.new(1, 0, 0, 20)
+BlockLabel.Position = UDim2.new(0, 0, 1, -25)
+BlockLabel.Text = "BLOCKS DETECTED: 0"
+BlockLabel.TextColor3 = Color3.fromRGB(0, 180, 255)
+BlockLabel.BackgroundTransparency = 1
+BlockLabel.Font = Enum.Font.RobotoMono; BlockLabel.TextSize = 9
+BlockLabel.Parent = MainFrame
+
+----------------------------------------------------------------
+-- ⚙️ CORE LOGIC
+----------------------------------------------------------------
+local function cleanup()
+    isSpelling = false
+    for part, _ in pairs(targetOffsets) do
+        if part:FindFirstChild("TyperPos") then part.TyperPos:Destroy() end
+        if part:FindFirstChild("TyperGyro") then part.TyperGyro:Destroy() end
+        part.CanCollide = true 
+    end
+    targetOffsets = {}
+end
+
+CloseUI.MouseButton1Click:Connect(function() cleanup() ScreenGui:Destroy() end)
+
+local function getAircraft()
+    local folder = workspace:FindFirstChild("PlayerAircraft")
+    return workspace:FindFirstChild(player.Name .. " Aircraft") or (folder and folder:FindFirstChild(player.Name))
+end
+
+local function applyFormation()
+    local text = InputBox.Text:upper()
+    local aircraft = getAircraft()
+    if not aircraft then return end
+    
+    local blocks = {}
+    for _, v in ipairs(aircraft:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name == "BlockStd" then
+            local current = v
+            local isSeat = false
+            while current and current ~= workspace do
+                if current:IsA("Seat") or current.Name:lower():find("seat") then isSeat = true break end
+                current = current.Parent
+            end
+            if not isSeat then
+                table.insert(blocks, v)
+                v.Anchored = false; v.CanCollide = false
+                for _, w in ipairs(v:GetDescendants()) do if w:IsA("Weld") or w:IsA("WeldConstraint") then w:Destroy() end end
+            end
+        end
+    end
+
+    if #blocks == 0 then return end
+    local points = {}
+    local bGap, lGap = 2.2, 18
+    local totalW = #text * lGap
+
+    for i = 1, #text do
+        local grid = Alphabet[text:sub(i,i)] or Alphabet[" "]
+        for row = 1, 7 do
+            for col = 1, 7 do
+                if grid[row][col] == 1 then
+                    local xPos = publicMode and ((totalW/2) - (((i-1)*lGap) + (col*bGap))) or ((((i-1)*lGap) + (col*bGap)) - (totalW/2))
+                    table.insert(points, Vector3.new(xPos, -(row * bGap), 0))
+                end
+            end
+        end
+    end
+
+    for i, part in ipairs(blocks) do
+        local pIdx = ((i - 1) % #points) + 1
+        targetOffsets[part] = points[pIdx]
+        if not part:FindFirstChild("TyperPos") then
+            local bp = Instance.new("BodyPosition", part)
+            bp.Name = "TyperPos"; bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bp.P = 25000
+        end
+        if not part:FindFirstChild("TyperGyro") then
+            local bg = Instance.new("BodyGyro", part)
+            bg.Name = "TyperGyro"; bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        end
+    end
+    isSpelling = true
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    publicMode = not publicMode
+    ToggleBtn.Text = publicMode and "VIEW: PUBLIC" or "VIEW: PRIVATE"
+    if isSpelling then applyFormation() end
+end)
+
+ActionBtn.MouseButton1Click:Connect(function() cleanup() applyFormation() end)
+StopBtn.MouseButton1Click:Connect(cleanup)
+
+RunService.Heartbeat:Connect(function()
+    local aircraft = getAircraft()
+    if aircraft then
+        local c = 0
+        for _, v in ipairs(aircraft:GetDescendants()) do if v:IsA("BasePart") and v.Name == "BlockStd" then c = c + 1 end end
+        BlockLabel.Text = "BLOCKS DETECTED: " .. c
+    end
+
+    if not isSpelling then return end
+    for part, offset in pairs(targetOffsets) do
+        if part and part.Parent and hrp then
+            local finalPos = hrp.CFrame:PointToWorldSpace(offset + Vector3.new(0, currentHeight, currentDist))
+            part.TyperPos.Position = finalPos
+            part.TyperGyro.CFrame = publicMode and (hrp.CFrame * CFrame.Angles(0, math.pi, 0)) or hrp.CFrame
+        end
+    end
+end)
